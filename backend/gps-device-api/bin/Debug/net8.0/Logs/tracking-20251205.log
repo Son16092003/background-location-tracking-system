@@ -1,4 +1,0 @@
-2025-12-05T11:07:04.7787771+07:00  [INF] Now listening on: "http://localhost:5000" (d826f4b8)
-2025-12-05T11:07:04.8071627+07:00  [INF] Application started. Press Ctrl+C to shut down. (dcaefe54)
-2025-12-05T11:07:04.8134033+07:00  [INF] Hosting environment: "Production" (bc5a1a4e)
-2025-12-05T11:07:04.8185005+07:00  [INF] Content root path: "C:\TTTN\Sql Server\BackgroundLocationTracking\TrackingAPI\bin\Debug\net8.0" (cc26f24e)
