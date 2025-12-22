@@ -2,7 +2,7 @@
 # Config
 # =========================
 $avdName = "Pixel_6a_DeviceOwner"
-$apkPath = "C:\TTTN\Sql Server\BackgroundLocationTracking\app\build\outputs\apk\debug\app-debug.apk"
+$apkPath = "C:\TTTN\Sql Server\BackgroundLocationTracking\mobile\android-app\app\build\outputs\apk\debug\app-debug.apk"
 $packageName = "com.plcoding.backgroundlocationtracking"
 $deviceAdminReceiver = ".admin.MyDeviceAdminReceiver"
 

@@ -6,7 +6,7 @@ import { startSignalR } from "./signalrClient.js";
 
 // URL của SignalR Hub (.NET Web API)
 const HUB_URL =
-  "https://schedules-labeled-buddy-frederick.trycloudflare.com/hubs/location"; // đổi thành URL thật của bạn nhớ thêm /hubs/location ở cuối
+  "https://isa-wishing-regard-prepare.trycloudflare.com/hubs/location"; // đổi thành URL thật của bạn nhớ thêm /hubs/location ở cuối
 
 let mapLive = null;
 let mapSummary = null;
@@ -150,7 +150,7 @@ function initSignalR() {
     ReceiveLocationUpdate: (data) => {
       if (!data) return;
       console.debug("[main] ReceiveLocationUpdate payload:", data);
-      handleRealtimeTracking(data);
+      onSignalRLocationReceived(data);
     },
 
     Connected: (payload) => {
@@ -163,26 +163,66 @@ function initSignalR() {
     .catch((err) => console.error("[main] SignalR error", err));
 }
 
+function onSignalRLocationReceived(payload) {
+  // 1️⃣ Bắt buộc phải có timestamp
+  const timestamp = parseTimestamp(payload.timestamp);
+  if (!timestamp) {
+    console.warn("[gate] Missing timestamp, drop", payload);
+    return;
+  }
+
+  // 2️⃣ Chỉ nhận data trong thời gian LIVE (ví dụ ≤ 10s)
+  const now = Date.now();
+  const diffMs = Math.abs(now - timestamp.getTime());
+
+  if (diffMs > 10_000) {
+    console.warn(
+      "[gate] Non-realtime payload dropped",
+      "diff(ms):",
+      diffMs,
+      payload
+    );
+    return;
+  }
+
+  // 3️⃣ OK → mới cho đi vào map live
+  handleRealtimeTracking(payload);
+}
+
+
 // ================================================
 // 3️⃣ Xử lý sự kiện Realtime từ Hub
 // ================================================
 function handleRealtimeTracking(data) {
   /* ===============================
-   * 1. Parse & normalize payload
+   * 1. Parse payload
    * =============================== */
   const deviceId = data.deviceId;
   const userName = data.userName;
   const latitude = Number(data.latitude);
   const longitude = Number(data.longitude);
   const timestamp = parseTimestamp(data.timestamp);
+  const isOfflinePayload = data.isOffline === true; // ⭐ QUYẾT ĐỊNH SỐ PHẬN
 
   if (!deviceId || isNaN(latitude) || isNaN(longitude) || !timestamp) {
-    console.warn("[main] Invalid tracking payload, ignored:", data);
+    return;
+  }
+
+  /* =====================================================
+   * ⛔ OFFLINE → MAP LIVE KHÔNG QUAN TÂM
+   * ===================================================== */
+  if (isOfflinePayload) {
+    // ❌ Không tạo device
+    // ❌ Không lưu coords
+    // ❌ Không vẽ trail
+    // ❌ Không update marker
+    // ❌ Không autoFit
+    // ❌ Không update UI
     return;
   }
 
   /* ===============================
-   * 2. Get or create device
+   * 2. Get or create device (REALTIME ONLY)
    * =============================== */
   let device = devices[deviceId];
   const isNewDevice = !device;
@@ -200,32 +240,20 @@ function handleRealtimeTracking(data) {
       status: "realtime",
     };
     devices[deviceId] = device;
-    console.info(`[main] Created new device entry for ${deviceId}`);
   }
 
   /* ===============================
-   * 3. ⛔ DROP OUT-OF-ORDER DATA
+   * 3. Drop out-of-order realtime
    * =============================== */
   if (device.lastTimestamp && timestamp <= device.lastTimestamp) {
-    console.warn(
-      `[main] Out-of-order update ignored for ${deviceId}`,
-      "incoming:",
-      timestamp.toISOString(),
-      "last:",
-      device.lastTimestamp.toISOString()
-    );
-    return; // ❗ DO NOT update map, trail, coords
+    return;
   }
 
-  console.info(
-    `[main] Processing device=${deviceId} lat=${latitude} lon=${longitude} user=${userName} time=${timestamp.toISOString()}`
-  );
-
-  /* ===============================
-   * 4. Update coords history
-   * =============================== */
   const latLng = L.latLng(latitude, longitude);
 
+  /* ===============================
+   * 4. Realtime history (for trail)
+   * =============================== */
   device.coords.push({
     latitude,
     longitude,
@@ -239,7 +267,7 @@ function handleRealtimeTracking(data) {
   }
 
   /* ===============================
-   * 5. Trail (only for valid updates)
+   * 5. Vẽ TRAIL (REALTIME ONLY)
    * =============================== */
   if (device.visible) {
     const trailPoint = L.circleMarker(latLng, {
@@ -251,7 +279,7 @@ function handleRealtimeTracking(data) {
   }
 
   /* ===============================
-   * 6. Update / create live marker
+   * 6. Live marker
    * =============================== */
   if (device.liveMarker) {
     device.liveMarker.setLatLng(latLng);
@@ -264,7 +292,7 @@ function handleRealtimeTracking(data) {
   }
 
   /* ===============================
-   * 7. Update device state
+   * 7. Update realtime state
    * =============================== */
   device.lastLatLng = latLng;
   device.lastTimestamp = timestamp;
@@ -274,44 +302,10 @@ function handleRealtimeTracking(data) {
 
   try {
     device.liveMarker.setIcon(liveIcon);
-  } catch (_) {}
+  } catch {}
 
   /* ===============================
-   * 8. Cancel offline removal if any
-   * =============================== */
-  if (device.removeTimer) {
-    clearTimeout(device.removeTimer);
-    device.removeTimer = null;
-  }
-
-  /* ===============================
-   * 9. Update popup + tooltip
-   * =============================== */
-  try {
-    const popup = device.liveMarker.getPopup?.();
-    popup?.setContent(
-      `<b>${
-        device.userName || device.deviceId
-      }</b><br>${timestamp.toLocaleTimeString()}`
-    );
-
-    const label = getDeviceLabel(device);
-    if (device.liveMarker.getTooltip?.()) {
-      device.liveMarker.getTooltip().setContent(label);
-    } else {
-      device.liveMarker
-        .bindTooltip(label, {
-          permanent: true,
-          direction: "top",
-          offset: [0, -20],
-          className: "device-label",
-        })
-        .openTooltip();
-    }
-  } catch (_) {}
-
-  /* ===============================
-   * 10. Live status monitor
+   * 8. Status timer
    * =============================== */
   if (!device.liveTimer) {
     device.liveTimer = setInterval(() => {
@@ -333,29 +327,26 @@ function handleRealtimeTracking(data) {
               ? pauseIcon
               : endIcon
           );
-        } catch (_) {}
+        } catch {}
 
         updateDeviceList(mapLive);
 
         if (newStatus === "offline") {
           clearInterval(device.liveTimer);
           device.liveTimer = null;
-
-          device.removeTimer = setTimeout(() => {
-            removeDeviceVisuals(deviceId);
-          }, 60_000);
         }
       }
     }, 5000);
   }
 
   /* ===============================
-   * 11. UI updates
+   * 9. UI + autofit (REALTIME ONLY)
    * =============================== */
   updateDeviceList(mapLive);
   autoFitActiveDevices(isNewDevice ? "new" : "update");
   schedulePersist();
 }
+
 
 // Remove device visuals (live marker and trail) from the map and mark device as hidden.
 function removeDeviceVisuals(deviceId) {

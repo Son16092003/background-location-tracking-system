@@ -1,7 +1,0 @@
-{
-  "android.app.extra.PROVISIONING_DEVICE_ADMIN_COMPONENT_NAME": "com.plcoding.backgroundlocationtracking/.admin.MyDeviceAdminReceiver",
-  "android.app.extra.PROVISIONING_DEVICE_ADMIN_PACKAGE_DOWNLOAD_LOCATION": "https://github.com/Son16092003/GPSTrackingDeviceOwner/releases/download/v1.0.0/app-debug.apk",
-  "android.app.extra.PROVISIONING_DEVICE_ADMIN_PACKAGE_CHECKSUM": "30e7793c58ec2af7c86ffa0bd01d5ff3fecabd6d8ef0e0300565fc0513353ea7",
-  "android.app.extra.PROVISIONING_SKIP_ENCRYPTION": true,
-  "android.app.extra.PROVISIONING_LEAVE_ALL_SYSTEM_APPS_ENABLED": true
-}

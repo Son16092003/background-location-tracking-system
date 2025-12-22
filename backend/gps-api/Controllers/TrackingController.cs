@@ -39,30 +39,41 @@ namespace TrackingAPI.Controllers
             if (tracking.RecordDate == default)
                 tracking.RecordDate = DateTime.UtcNow.AddHours(7);
 
-            // 1️ Lưu DB (Entity)
+            // 1️ LUÔN lưu DB (offline hay realtime đều lưu)
             _context.GPS_DeviceTracking.Add(tracking);
             await _context.SaveChangesAsync();
 
-            // 2️ Map Entity → DTO cho realtime
-            var realtimeDto = new LocationRealtimeDto
+            // ⭐ 2️ CHỈ phát SignalR nếu là realtime
+            if (!tracking.IsOffline)
             {
-                DeviceId = tracking.DeviceID,
-                UserName = tracking.UserName,
-                Latitude = tracking.Latitude,
-                Longitude = tracking.Longitude,
-                Timestamp = tracking.RecordDate
-            };
+                // Map Entity → DTO cho realtime
+                var realtimeDto = new LocationRealtimeDto
+                {
+                    DeviceId = tracking.DeviceID,
+                    UserName = tracking.UserName,
+                    Latitude = tracking.Latitude,
+                    Longitude = tracking.Longitude,
+                    Timestamp = tracking.RecordDate
+                };
 
-            // 3️ Broadcast SignalR (DTO ONLY)
-            await _hubContext
-                .Clients
-                .All
-                .SendAsync("ReceiveLocationUpdate", realtimeDto);
+                // Broadcast SignalR (DTO ONLY)
+                await _hubContext
+                    .Clients
+                    .All
+                    .SendAsync("ReceiveLocationUpdate", realtimeDto);
+            }
+            else
+            {
+                // 🔕 Offline data → KHÔNG broadcast
+                // Chỉ lưu DB để phục vụ history / replay
+            }
 
-            // 4️ Response cho client gửi GPS (android / device)
+            // 3️ Response cho client gửi GPS (android / device)
             return Ok(new
             {
-                message = "Inserted & broadcasted successfully",
+                message = tracking.IsOffline
+                    ? "Inserted offline data (no realtime broadcast)"
+                    : "Inserted & broadcasted realtime successfully",
                 id = tracking.Oid
             });
         }

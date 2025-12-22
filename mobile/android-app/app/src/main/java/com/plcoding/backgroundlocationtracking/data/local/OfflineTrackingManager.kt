@@ -21,7 +21,8 @@ class OfflineTrackingManager private constructor(context: Context) {
 
         fun getInstance(context: Context): OfflineTrackingManager {
             return INSTANCE ?: synchronized(this) {
-                INSTANCE ?: OfflineTrackingManager(context.applicationContext).also { INSTANCE = it }
+                INSTANCE ?: OfflineTrackingManager(context.applicationContext)
+                    .also { INSTANCE = it }
             }
         }
 
@@ -35,11 +36,10 @@ class OfflineTrackingManager private constructor(context: Context) {
 
         // ✅ Sửa lại hàm này thành suspend
         suspend fun getPendingCount(context: Context): Int {
-            val pendingList = getInstance(context).dao.getAll() // gọi suspend
+            val pendingList = getInstance(context).dao.getAll()
             return pendingList.size
         }
     }
-
 
     /**
      * Lưu bản ghi vào Room DB (khi không có mạng)
@@ -57,7 +57,9 @@ class OfflineTrackingManager private constructor(context: Context) {
                         recordDate = tracking.RecordDate,
                         optimisticLockField = tracking.OptimisticLockField,
                         gcRecord = tracking.GCRecord,
-                        userName = tracking.UserName
+                        userName = tracking.UserName,
+
+                        isOffline = true
                     )
                 )
                 Log.w(
@@ -93,6 +95,7 @@ class OfflineTrackingManager private constructor(context: Context) {
                 Log.i(TAG, "🚀 Bắt đầu retry ${pendingList.size} bản ghi offline...")
 
                 for (item in pendingList) {
+
                     val trackingData = TrackingData(
                         Oid = item.oid,
                         DeviceID = item.deviceID,
@@ -102,7 +105,10 @@ class OfflineTrackingManager private constructor(context: Context) {
                         RecordDate = item.recordDate,
                         OptimisticLockField = item.optimisticLockField,
                         GCRecord = item.gcRecord,
-                        UserName = item.userName
+                        UserName = item.userName,
+
+                        // ⭐ QUAN TRỌNG: dữ liệu retry LUÔN là offline
+                        IsOffline = true
                     )
 
                     val success = try {

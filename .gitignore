@@ -3,3 +3,14 @@
 *.iml
 .gradle/
 local.properties
+
+# Visual Studio
+.vs/
+
+# Build output
+bin/
+obj/
+
+# Rider / VS Code
+.idea/
+.vscode/

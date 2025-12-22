@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "M1PcJoYXcA4=",
+  "dgSpecHash": "26SrBWIDndk=",
   "success": true,
-  "projectFilePath": "C:\\TTTN\\Sql Server\\BackgroundLocationTracking\\TrackingAPI\\TrackingAPI.csproj",
+  "projectFilePath": "C:\\TTTN\\Sql Server\\BackgroundLocationTracking\\backend\\gps-api\\TrackingAPI.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\Dinh Trung Son\\.nuget\\packages\\azure.core\\1.38.0\\azure.core.1.38.0.nupkg.sha512",
     "C:\\Users\\Dinh Trung Son\\.nuget\\packages\\azure.identity\\1.11.4\\azure.identity.1.11.4.nupkg.sha512",

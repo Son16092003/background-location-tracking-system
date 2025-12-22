@@ -15,5 +15,8 @@ data class OfflineTrackingEntity(
     val recordDate: String,
     val optimisticLockField: Int?,
     val gcRecord: Int?,
-    val userName: String?
+    val userName: String?,
+
+    // 🔥 QUAN TRỌNG
+    val isOffline: Boolean = true
 )

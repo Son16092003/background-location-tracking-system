@@ -70,7 +70,8 @@ class LocationService : Service() {
         startForeground(NOTIFICATION_ID, createSilentNotification())
 
         // Khởi tạo ConnectivityManager và đăng ký network callback
-        connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        connectivityManager =
+            getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         registerNetworkCallback()
     }
 
@@ -78,10 +79,17 @@ class LocationService : Service() {
         // Retry offline dữ liệu ngay khi service start
         serviceScope.launch {
             try {
-                val retried = OfflineTrackingManager.retryOffline(applicationContext)
-                Log.i(TAG, "🚀 Retry offline data khi service start: $retried bản ghi gửi thành công.")
+                val retried =
+                    OfflineTrackingManager.retryOffline(applicationContext)
+                Log.i(
+                    TAG,
+                    "🚀 Retry offline data khi service start: $retried bản ghi gửi thành công."
+                )
             } catch (e: Exception) {
-                Log.e(TAG, "❌ Lỗi retry offline khi start service: ${e.message}")
+                Log.e(
+                    TAG,
+                    "❌ Lỗi retry offline khi start service: ${e.message}"
+                )
             }
         }
 
@@ -90,11 +98,15 @@ class LocationService : Service() {
     }
 
     private fun loadIdentity() {
-        deviceId = prefs.getString("device_id", "UnknownDevice") ?: "UnknownDevice"
+        deviceId =
+            prefs.getString("device_id", "UnknownDevice") ?: "UnknownDevice"
         title = prefs.getString("title", null)
         userName = prefs.getString("user_name", null)
         hasValidIdentity = !title.isNullOrEmpty() && !userName.isNullOrEmpty()
-        Log.i(TAG, "✅ Device Identity loaded: DeviceID=$deviceId, Title=$title, UserName=$userName")
+        Log.i(
+            TAG,
+            "✅ Device Identity loaded: DeviceID=$deviceId, Title=$title, UserName=$userName"
+        )
     }
 
     private fun checkAndStartTracking() {
@@ -109,12 +121,18 @@ class LocationService : Service() {
     }
 
     private fun startReceivingLocation() {
-        Log.i(TAG, "📡 Bắt đầu nhận location định kỳ mỗi ${LOCATION_INTERVAL_MS / 1000}s")
+        Log.i(
+            TAG,
+            "📡 Bắt đầu nhận location định kỳ mỗi ${LOCATION_INTERVAL_MS / 1000}s"
+        )
         isReceiving = true
 
         locationClient.getLocationUpdates(LOCATION_INTERVAL_MS)
             .retryWhen { cause, attempt ->
-                Log.w(TAG, "⚠️ Lỗi luồng location: ${cause?.message}. Thử lại (attempt=$attempt)")
+                Log.w(
+                    TAG,
+                    "⚠️ Lỗi luồng location: ${cause?.message}. Thử lại (attempt=$attempt)"
+                )
                 delay(2000)
                 true
             }
@@ -122,7 +140,10 @@ class LocationService : Service() {
                 Log.e(TAG, "❌ Lỗi luồng lấy vị trí", e)
             }
             .onEach { location ->
-                Log.d(TAG, "🛠️ Location emit: lat=${location.latitude}, lon=${location.longitude}, acc=${location.accuracy}m")
+                Log.d(
+                    TAG,
+                    "🛠️ Location emit: lat=${location.latitude}, lon=${location.longitude}, acc=${location.accuracy}m"
+                )
                 processLocation(location)
             }
             .launchIn(serviceScope)
@@ -151,12 +172,14 @@ class LocationService : Service() {
 
         Log.i(
             TAG,
-            "📏 moved=${movedDistance}m, accuracy=${newLocation.accuracy}, " +
-                    "minRequired=$minRequired"
+            "📏 moved=${movedDistance}m, accuracy=${newLocation.accuracy}, minRequired=$minRequired"
         )
 
         if (movedDistance >= minRequired) {
-            Log.i(TAG, "🚀 Đủ điều kiện gửi → moved >= max(20, 2*accuracy)")
+            Log.i(
+                TAG,
+                "🚀 Đủ điều kiện gửi → moved >= max(20, 2*accuracy)"
+            )
             lastSentLocation = newLocation
             sendLocation(newLocation)
         } else {
@@ -170,36 +193,64 @@ class LocationService : Service() {
             Title = title,
             Latitude = location.latitude,
             Longitude = location.longitude,
-            UserName = userName
+            UserName = userName,
+            IsOffline = false // ⭐ realtime → backend sẽ cho phép phát Signal
         )
 
         serviceScope.launch {
-            val pendingCountBefore = OfflineTrackingManager.getPendingCount(applicationContext)
-            Log.i(TAG, "📊 Pending offline count before send: $pendingCountBefore")
+            val pendingCountBefore =
+                OfflineTrackingManager.getPendingCount(applicationContext)
+            Log.i(
+                TAG,
+                "📊 Pending offline count before send: $pendingCountBefore"
+            )
 
             try {
-                val success = TrackingRepository.postTrackingWithRetry(
-                    data = trackingData,
-                    attempts = 3,
-                    initialDelayMs = 1500L
-                )
-                if (success) Log.i(TAG, "✅ Sent successfully: $trackingData")
-                else {
-                    Log.w(TAG, "⚠️ Failed to send after retries, saving offline")
-                    OfflineTrackingManager.saveOffline(applicationContext, trackingData)
+                val success =
+                    TrackingRepository.postTrackingWithRetry(
+                        data = trackingData,
+                        attempts = 3,
+                        initialDelayMs = 1500L
+                    )
+
+                if (success) {
+                    Log.i(TAG, "✅ Sent successfully: $trackingData")
+                } else {
+                    Log.w(
+                        TAG,
+                        "⚠️ Failed to send after retries, saving offline"
+                    )
+                    OfflineTrackingManager.saveOffline(
+                        applicationContext,
+                        trackingData.copy(IsOffline = true)
+                    )
                 }
 
-                val pendingCountAfter = OfflineTrackingManager.getPendingCount(applicationContext)
-                Log.i(TAG, "📊 Pending offline count after send: $pendingCountAfter")
+                val pendingCountAfter =
+                    OfflineTrackingManager.getPendingCount(applicationContext)
+                Log.i(
+                    TAG,
+                    "📊 Pending offline count after send: $pendingCountAfter"
+                )
             } catch (e: Exception) {
-                Log.e(TAG, "❌ Exception while sending, saving offline: $trackingData", e)
-                OfflineTrackingManager.saveOffline(applicationContext, trackingData)
+                Log.e(
+                    TAG,
+                    "❌ Exception while sending, saving offline: $trackingData",
+                    e
+                )
+                OfflineTrackingManager.saveOffline(
+                    applicationContext,
+                    trackingData.copy(IsOffline = true)
+                )
             }
         }
     }
 
     private fun createSilentNotification(): Notification {
-        return NotificationCompat.Builder(this, LocationApp.LOCATION_CHANNEL_ID)
+        return NotificationCompat.Builder(
+            this,
+            LocationApp.LOCATION_CHANNEL_ID
+        )
             .setSmallIcon(R.drawable.ic_action_name)
             .setPriority(NotificationCompat.PRIORITY_MIN)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
@@ -216,10 +267,17 @@ class LocationService : Service() {
                 Log.i(TAG, "📶 Mạng khả dụng — retry offline ngay lập tức")
                 serviceScope.launch {
                     try {
-                        val retried = OfflineTrackingManager.retryOffline(applicationContext)
-                        Log.i(TAG, "🚀 Retry offline khi có mạng: $retried bản ghi gửi thành công.")
+                        val retried =
+                            OfflineTrackingManager.retryOffline(applicationContext)
+                        Log.i(
+                            TAG,
+                            "🚀 Retry offline khi có mạng: $retried bản ghi gửi thành công."
+                        )
                     } catch (e: Exception) {
-                        Log.e(TAG, "❌ Lỗi retry offline khi có mạng: ${e.message}")
+                        Log.e(
+                            TAG,
+                            "❌ Lỗi retry offline khi có mạng: ${e.message}"
+                        )
                     }
                 }
             }
@@ -234,15 +292,21 @@ class LocationService : Service() {
         super.onTaskRemoved(rootIntent)
         Log.w(TAG, "♻️ Service bị remove — thiết lập khởi động lại.")
 
-        val restartServiceIntent = Intent(applicationContext, LocationService::class.java).apply {
-            setPackage(packageName)
-        }
-        val restartServicePendingIntent = PendingIntent.getService(
-            this, 1, restartServiceIntent,
-            PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
-        )
+        val restartServiceIntent =
+            Intent(applicationContext, LocationService::class.java).apply {
+                setPackage(packageName)
+            }
 
-        val alarmService = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val restartServicePendingIntent =
+            PendingIntent.getService(
+                this,
+                1,
+                restartServiceIntent,
+                PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
+            )
+
+        val alarmService =
+            getSystemService(Context.ALARM_SERVICE) as AlarmManager
         alarmService.set(
             AlarmManager.ELAPSED_REALTIME,
             SystemClock.elapsedRealtime() + 1000,
@@ -255,9 +319,13 @@ class LocationService : Service() {
         serviceScope.cancel()
         try {
             connectivityManager.unregisterNetworkCallback(networkCallback)
-        } catch (_: Exception) {}
+        } catch (_: Exception) {
+        }
         isReceiving = false
-        Log.i(TAG, "🧹 Service destroyed — Coroutine cancelled & location stopped")
+        Log.i(
+            TAG,
+            "🧹 Service destroyed — Coroutine cancelled & location stopped"
+        )
     }
 
     override fun onBind(intent: Intent?): IBinder? = null

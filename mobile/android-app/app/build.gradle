@@ -2,7 +2,7 @@ plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
     id("kotlin-kapt")
-    id("org.jetbrains.kotlin.plugin.serialization") version "1.9.24" // <== cái này rất quan trọng
+    id("org.jetbrains.kotlin.plugin.serialization") version "1.9.24"
 }
 
 android {
@@ -11,28 +11,52 @@ android {
 
     defaultConfig {
         applicationId "com.plcoding.backgroundlocationtracking"
-        minSdk 23 // ⚠️ tăng nhẹ cho an toàn với foreground service và location permission mới
+        minSdk 23
         targetSdk 34
         versionCode 1
         versionName "1.0"
+
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
 
-        // ✅ Config API base
-        buildConfigField "String", "BASE_URL", "\"https://schedules-labeled-buddy-frederick.trycloudflare.com/api/GPS_DeviceTracking\""
+        // ✅ API config
+        buildConfigField "String", "BASE_URL",
+                "\"https://isa-wishing-regard-prepare.trycloudflare.com/api/GPS_DeviceTracking\""
         buildConfigField "boolean", "ENABLE_HTTP_LOG", "true"
+    }
+
+    /* =======================
+       🔐 SIGNING CONFIG
+       ======================= */
+    signingConfigs {
+        release {
+            storeFile file("deviceowner-release.keystore")
+            storePassword "Dts16092003"
+            keyAlias "deviceowner"
+            keyPassword "Dts16092003"
+        }
     }
 
     buildTypes {
         debug {
-            buildConfigField "String", "BASE_URL", "\"https://schedules-labeled-buddy-frederick.trycloudflare.com/api/GPS_DeviceTracking\""
+            buildConfigField "String", "BASE_URL",
+                    "\"https://isa-wishing-regard-prepare.trycloudflare.com/api/GPS_DeviceTracking\""
             buildConfigField "boolean", "ENABLE_HTTP_LOG", "true"
         }
+
         release {
-            buildConfigField "String", "BASE_URL", "\"https://schedules-labeled-buddy-frederick.trycloudflare.com/api/GPS_DeviceTracking\""
+            signingConfig signingConfigs.release   // ✅ QUAN TRỌNG
+            buildConfigField "String", "BASE_URL",
+                    "\"https://isa-wishing-regard-prepare.trycloudflare.com/api/GPS_DeviceTracking\""
             buildConfigField "boolean", "ENABLE_HTTP_LOG", "false"
+
             minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            shrinkResources false
+            debuggable false
+
+            proguardFiles getDefaultProguardFile(
+                    'proguard-android-optimize.txt'
+            ), 'proguard-rules.pro'
         }
     }
 
@@ -62,33 +86,34 @@ android {
 }
 
 dependencies {
-    // ✅ Compose BOM quản lý đồng bộ version
+
+    // Compose BOM
     implementation platform('androidx.compose:compose-bom:2024.06.00')
     androidTestImplementation platform('androidx.compose:compose-bom:2024.06.00')
 
-    // Android core
+    // Core
     implementation "androidx.core:core-ktx:1.13.1"
     implementation "androidx.appcompat:appcompat:1.6.1"
     implementation "androidx.lifecycle:lifecycle-runtime-ktx:2.8.4"
     implementation "androidx.activity:activity-compose:1.9.0"
 
-    // Compose UI
+    // Compose
     implementation "androidx.compose.ui:ui"
     implementation "androidx.compose.material:material"
     implementation "androidx.compose.ui:ui-tooling-preview"
     debugImplementation "androidx.compose.ui:ui-tooling"
     debugImplementation "androidx.compose.ui:ui-test-manifest"
 
-    // Tests
+    // Test
     testImplementation "junit:junit:4.13.2"
     androidTestImplementation "androidx.test.ext:junit:1.2.1"
     androidTestImplementation "androidx.test.espresso:espresso-core:3.6.1"
     androidTestImplementation "androidx.compose.ui:ui-test-junit4"
 
-    // ✅ Location
+    // Location
     implementation 'com.google.android.gms:play-services-location:21.3.0'
 
-    // ✅ Retrofit + OkHttp
+    // Retrofit + OkHttp
     implementation 'com.squareup.retrofit2:retrofit:2.9.0'
     implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
     implementation "com.squareup.okhttp3:okhttp:4.12.0"
@@ -104,5 +129,4 @@ dependencies {
 
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
     implementation 'com.google.android.material:material:1.11.0'
-
 }

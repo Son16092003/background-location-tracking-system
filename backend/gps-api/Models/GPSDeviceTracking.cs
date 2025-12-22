@@ -31,5 +31,10 @@ namespace TrackingAPI.Models
 
         [StringLength(100)]
         public string? UserName { get; set; }
+
+        // ⭐ NEW: đánh dấu offline / realtime
+        // true  = pending / retry (KHÔNG phát SignalR)
+        // false = realtime (ĐƯỢC phát SignalR)
+        public bool IsOffline { get; set; } = false;
     }
 }

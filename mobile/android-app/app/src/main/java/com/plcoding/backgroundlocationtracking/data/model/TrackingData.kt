@@ -17,7 +17,12 @@ data class TrackingData(
     val RecordDate: String = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss").format(Date()),
     val OptimisticLockField: Int? = null,
     val GCRecord: Int? = null,
-    val UserName: String? = null
+    val UserName: String? = null,
+
+    // ⭐ NEW: đánh dấu dữ liệu offline hay realtime
+    // true  = dữ liệu pending (offline, retry lại)
+    // false = dữ liệu realtime (được phép phát Signal)
+    val IsOffline: Boolean = false
 ) {
     fun toJsonString(): String {
         val jo = JSONObject()
@@ -30,6 +35,10 @@ data class TrackingData(
         jo.put("OptimisticLockField", OptimisticLockField ?: JSONObject.NULL)
         jo.put("GCRecord", GCRecord ?: JSONObject.NULL)
         jo.put("UserName", UserName)
+
+        // ⭐ gửi cờ này lên Web API
+        jo.put("IsOffline", IsOffline)
+
         return jo.toString()
     }
 }
