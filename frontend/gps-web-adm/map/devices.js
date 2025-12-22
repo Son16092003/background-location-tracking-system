@@ -12,27 +12,6 @@ export function getColorFromId(deviceId) {
 }
 
 /**
- * Toggle hiển thị device (Live mode)
- */
-export function toggleDevice(deviceId, visible, mapInstance) {
-  const device = devices[deviceId];
-  if (!device || !mapInstance) return;
-  device.visible = visible;
-
-  // Hiển thị/ẩn trail
-  device.trailMarkers?.forEach((m) => (visible ? m.addTo(mapInstance) : m.remove()));
-
-  // Hiển thị/ẩn live marker (bao gồm cả offline marker với endIcon)
-  if (device.liveMarker) {
-    if (visible) {
-      device.liveMarker.addTo(mapInstance);
-    } else {
-      device.liveMarker.remove();
-    }
-  }
-}
-
-/**
  * Cập nhật danh sách sidebar Live
  */
 export function updateDeviceList(mapInstance) {

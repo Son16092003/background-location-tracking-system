@@ -175,7 +175,7 @@ function onSignalRLocationReceived(payload) {
   const now = Date.now();
   const diffMs = Math.abs(now - timestamp.getTime());
 
-  if (diffMs > 10_000) {
+  if (diffMs > 15_000) {
     console.warn(
       "[gate] Non-realtime payload dropped",
       "diff(ms):",
@@ -186,6 +186,7 @@ function onSignalRLocationReceived(payload) {
   }
 
   // 3️⃣ OK → mới cho đi vào map live
+  console.log("[debug] Payload received (bypass timestamp filter):", payload);
   handleRealtimeTracking(payload);
 }
 
@@ -305,36 +306,85 @@ function handleRealtimeTracking(data) {
   } catch {}
 
   /* ===============================
-   * 8. Status timer
-   * =============================== */
+    * 8. Status timer (3-phase)
+    * =============================== */
   if (!device.liveTimer) {
     device.liveTimer = setInterval(() => {
+      if (!device.lastTimestamp) return;
+
       const diffSec = (Date.now() - device.lastTimestamp.getTime()) / 1000;
-      let newStatus = "realtime";
 
-      if (diffSec > 180) newStatus = "offline";
-      else if (diffSec > 60) newStatus = "pause";
+      // ===== 1️⃣ REALTIME (< 60s)
+      if (diffSec < 60) {
+        if (device.status !== "realtime") {
+          device.status = "realtime";
+          device.isOffline = false;
 
-      if (newStatus !== device.status) {
-        device.status = newStatus;
-        device.isOffline = newStatus === "offline";
+          try {
+            device.liveMarker?.setIcon(liveIcon);
+          } catch {}
 
+          updateDeviceList(mapLive);
+        }
+        return;
+      }
+
+      // ===== 2️⃣ PAUSE (60s → <180s)
+      if (diffSec >= 60 && diffSec < 180) {
+        if (device.status !== "pause") {
+          device.status = "pause";
+          device.isOffline = false;
+
+          try {
+            device.liveMarker?.setIcon(pauseIcon);
+          } catch {}
+
+          updateDeviceList(mapLive);
+        }
+        return;
+      }
+
+      // ===== 3️⃣ DISCONNECT (180s → <240s)
+      if (diffSec >= 180 && diffSec < 240) {
+        if (device.status !== "disconnect") {
+          device.status = "disconnect";
+          device.isOffline = true;
+
+          try {
+            device.liveMarker?.setIcon(endIcon);
+          } catch {}
+
+          updateDeviceList(mapLive);
+        }
+        return;
+      }
+
+      // ===== 4️⃣ REMOVE (> 240s)
+      if (diffSec >= 240) {
+        console.warn(
+          "[realtime] Remove device (no data >240s):",
+          device.deviceId
+        );
+
+        // Remove marker
         try {
-          device.liveMarker.setIcon(
-            newStatus === "realtime"
-              ? liveIcon
-              : newStatus === "pause"
-              ? pauseIcon
-              : endIcon
-          );
+          device.liveMarker?.remove();
         } catch {}
 
-        updateDeviceList(mapLive);
+        // Remove trail
+        try {
+          device.trailMarkers?.forEach((m) => m.remove());
+        } catch {}
 
-        if (newStatus === "offline") {
-          clearInterval(device.liveTimer);
-          device.liveTimer = null;
-        }
+        // Clear timer
+        clearInterval(device.liveTimer);
+        device.liveTimer = null;
+
+        // Remove device
+        delete devices[device.deviceId];
+
+        updateDeviceList(mapLive);
+        schedulePersist();
       }
     }, 5000);
   }
