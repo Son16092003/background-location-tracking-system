@@ -3,10 +3,11 @@ import { createMap } from "./map/mapInit.js";
 import { devices, getColorFromId, updateDeviceList } from "./map/devices.js";
 import { startIcon, pauseIcon, liveIcon, endIcon } from "./map/icons.js";
 import { startSignalR } from "./signalrClient.js";
+import { checkLogin, logout } from "./auth.js";
+import { API_BASE } from "./config.js";
 
 // URL của SignalR Hub (.NET Web API)
-const HUB_URL =
-  "https://isa-wishing-regard-prepare.trycloudflare.com/hubs/location"; // đổi thành URL thật của bạn nhớ thêm /hubs/location ở cuối
+const HUB_URL = `${API_BASE}/hubs/location`;
 
 let mapLive = null;
 let mapSummary = null;
@@ -46,6 +47,18 @@ window.saveDeviceVisibility = saveDeviceVisibility; // để devices.js có th�
 // 1️⃣ Khởi tạo map & tab giao diện
 // ================================================
 document.addEventListener("DOMContentLoaded", async () => {
+  await checkLogin(); // 🔐 đợi xác thực xong mới cho load app
+
+  // LOGOUT BUTTON
+  const logoutBtn = document.getElementById("btn-logout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      await logout();
+      console.log("Logout clicked");
+    });
+  }
+
+  // Tạo 2 map Leaflet
   mapLive = createMap("map-live");
   mapSummary = createMap("map-summary");
 
@@ -186,7 +199,7 @@ function onSignalRLocationReceived(payload) {
   }
 
   // 3️⃣ OK → mới cho đi vào map live
-  console.log("[debug] Payload received (bypass timestamp filter):", payload);
+  console.log("Payload received:", payload);
   handleRealtimeTracking(payload);
 }
 
@@ -899,3 +912,5 @@ function schedulePersist() {
     persistDevicesState();
   }, 500);
 }
+
+

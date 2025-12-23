@@ -1,0 +1,134 @@
+/* =========================
+   RESET
+========================= */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+
+  /* background hình ảnh duy nhất */
+  background: url("../assets/login-bg.jpg") center / cover no-repeat fixed;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+
+/* =========================
+   LOGIN BOX
+========================= */
+.login-box {
+  width: 100%;
+  max-width: 420px;
+  padding: 32px 24px;
+  background: rgba(255, 255, 255, 0.8); /* để thấy background */
+  backdrop-filter: blur(6px);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+
+/* =========================
+   HEADER
+========================= */
+.login-box h3 {
+  margin-bottom: 16px;
+  text-align: center;
+  color: #011F82;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+/* =========================
+   INPUT
+========================= */
+.login-box input {
+  height: 52px;
+  padding: 0 14px;
+  font-size: 17px;
+  border-radius: 8px;
+  border: 1px solid #B9D6F3;
+  outline: none;
+}
+
+.login-box input:focus {
+  border-color: #011F82;
+  box-shadow: 0 0 6px rgba(1,31,130,0.4);
+}
+
+/* =========================
+   BUTTON
+========================= */
+.login-box button {
+  height: 54px;
+  margin-top: 12px;
+  border-radius: 8px;
+  border: none;
+  background: #011F82;
+  color: white;
+  font-size: 17px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.login-box button:active {
+  transform: scale(0.98);
+}
+
+/* =========================
+   ERROR
+========================= */
+.error {
+  min-height: 20px;
+  text-align: center;
+  color: #dc3545;
+  font-size: 14px;
+}
+
+/* =========================
+   RESPONSIVE
+========================= */
+@media (max-width: 768px) {
+  .login-box {
+    width: calc(100% - 40px);
+    padding: 28px 20px;
+  }
+
+  .login-box h3 {
+    font-size: 22px;
+  }
+
+  .login-box input,
+  .login-box button {
+    height: 48px;
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .login-box {
+    width: calc(100% - 30px);
+    padding: 24px 16px;
+  }
+
+  .login-box h3 {
+    font-size: 20px;
+  }
+
+  .login-box input,
+  .login-box button {
+    height: 44px;
+    font-size: 15px;
+  }
+}

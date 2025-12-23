@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Admin Login</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+
+
+    <!-- Login CSS -->
+    <link rel="stylesheet" href="./css/login.css" />
+  </head>
+
+  <body>
+    <div class="login-box">
+      <h3>WEB ADMIN LOGIN</h3>
+
+      <input id="username" placeholder="User name" />
+      <input id="password" type="password" placeholder="Password" />
+
+      <button onclick="login()">Login</button>
+      <div id="error" class="error"></div>
+    </div>
+
+    <script type="module">
+      import { API_BASE } from "./config.js";
+
+      // =======================
+      // Nếu đã login → về page map
+      // =======================
+      fetch(API_BASE + "/api/admin/me", {
+        credentials: "include",
+        cache: "no-store",
+      }).then((res) => {
+        if (res.ok) {
+          window.location.replace("index.html");
+        }
+      });
+
+      // =======================
+      // Login
+      // =======================
+      async function login() {
+        const errorEl = document.getElementById("error");
+        errorEl.innerText = "";
+
+        try {
+          const res = await fetch(API_BASE + "/api/admin/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({
+              username: document.getElementById("username").value.trim(),
+              password: document.getElementById("password").value,
+            }),
+          });
+
+          if (res.ok) {
+            window.location.replace("index.html");
+          } else {
+            errorEl.innerText = "Sai tài khoản hoặc mật khẩu";
+          }
+        } catch {
+          errorEl.innerText = "Không kết nối được server";
+        }
+      }
+
+      window.login = login;
+    </script>
+  </body>
+</html>

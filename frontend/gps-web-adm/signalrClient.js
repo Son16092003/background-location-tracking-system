@@ -1,11 +1,6 @@
 // --- signalrClient.js ---
 let connection = null;
 
-/**
- * Khởi tạo và bắt đầu kết nối tới SignalR Hub
- * @param {string} hubUrl - URL tới .NET Hub, ví dụ: http://0.0.0.0:5089/hubs/location
- * @param {object} handlers - Danh sách hàm callback cho các sự kiện nhận từ server
- */
 export async function startSignalR(hubUrl, handlers = {}) {
   if (!hubUrl) throw new Error("❌ Hub URL is required");
 
@@ -17,49 +12,42 @@ export async function startSignalR(hubUrl, handlers = {}) {
   }
 
   connection = new signalR.HubConnectionBuilder()
-    .withUrl(hubUrl)
-    // Enable automatic reconnect with default retry delays (0, 2s, 10s, 30s)
+    .withUrl(hubUrl, {
+      withCredentials: true, // 🔥 cookie login
+    })
     .withAutomaticReconnect()
     .configureLogging(signalR.LogLevel.Information)
     .build();
 
-  // Gắn các event handler
+  // Register handlers
   for (const [eventName, handler] of Object.entries(handlers)) {
-    // wrap handler to log payloads
     connection.on(eventName, (payload) => {
-      try {
-        console.debug(`[signalr] Event ${eventName} received:`, payload);
-      } catch (e) {}
+      console.debug(`[signalr] ${eventName}`, payload);
       try {
         handler(payload);
       } catch (err) {
-        console.error(`[signalr] Handler for ${eventName} threw`, err);
+        console.error(`[signalr] handler error`, err);
       }
     });
   }
 
-  // Detailed lifecycle logging for reconnects/close
   connection.onreconnecting((err) => {
     console.warn("⚠️ SignalR reconnecting:", err);
   });
 
-  connection.onreconnected((connectionId) => {
-    console.log("🔁 SignalR reconnected. ConnectionId:", connectionId);
+  connection.onreconnected((id) => {
+    console.log("🔁 SignalR reconnected:", id);
   });
 
-  // onclose will be invoked after reconnect attempts fail (if automatic reconnect gives up)
   connection.onclose((err) => {
-    console.warn("⚠️ SignalR connection closed:", err);
-    // Don't immediately restart here; automatic reconnect already attempted.
-    // If you want stronger retry, uncomment the following fallback to restart manually after delay.
-    // setTimeout(() => startSignalR(hubUrl, handlers), 5000);
+    console.warn("⚠️ SignalR closed:", err);
   });
 
   try {
     await connection.start();
-    console.log("✅ Connected to SignalR hub:", hubUrl);
+    console.log("✅ SignalR connected:", hubUrl);
   } catch (err) {
-    console.error("❌ Cannot connect to SignalR hub:", err);
+    console.error("❌ SignalR connect failed:", err);
     setTimeout(() => startSignalR(hubUrl, handlers), 5000);
   }
 

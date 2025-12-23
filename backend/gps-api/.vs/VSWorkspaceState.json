@@ -3,8 +3,10 @@
     "",
     "\\bin",
     "\\Controllers",
-    "\\Dtos",
+    "\\Hubs",
+    "\\Models",
     "\\Properties"
   ],
+  "SelectedNode": "\\Controllers\\AdminController.cs",
   "PreviewInSolutionExplorer": false
 }

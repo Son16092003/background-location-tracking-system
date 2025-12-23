@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using TrackingAPI.Data;
 using TrackingAPI.Hubs;
@@ -34,7 +35,36 @@ builder.Services
             JsonNamingPolicy.CamelCase;
     });
 
-// CORS – dùng cho Web Admin / SignalR
+// =======================
+// 🔐 Cookie Authentication (Web Admin)
+// =======================
+builder.Services
+    .AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.Cookie.Name = "TrackingAdminAuth";
+        options.Cookie.HttpOnly = true;
+
+        // 🔥 Cloudflare / HTTPS
+        options.Cookie.SameSite = SameSiteMode.None;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+
+        options.ExpireTimeSpan = TimeSpan.FromHours(8);
+        options.SlidingExpiration = true;
+
+        // ❌ Không redirect, trả 401 cho frontend xử lý
+        options.Events.OnRedirectToLogin = ctx =>
+        {
+            ctx.Response.StatusCode = 401;
+            return Task.CompletedTask;
+        };
+    });
+
+
+
+// =======================
+// CORS – Web Admin + SignalR
+// =======================
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
@@ -51,9 +81,6 @@ builder.Services.AddCors(options =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Logging (nếu bạn có package Serilog/File logging)
-// builder.Logging.AddFile("Logs/tracking-{Date}.log");
-
 var app = builder.Build();
 
 // =======================
@@ -66,14 +93,16 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// ⚠️ Nếu dùng Cloudflare/ngrok HTTP → có thể comment dòng này
+// ⚠️ Nếu chạy HTTP qua Cloudflare/ngrok có thể comment
 app.UseHttpsRedirection();
 
-// ✅ Áp dụng CORS trước khi map SignalR Hub
 app.UseCors("AllowAll");
 
+// 🔐 BẮT BUỘC: Authentication → Authorization
+app.UseAuthentication();
 app.UseAuthorization();
 
+// Controllers
 app.MapControllers();
 
 // SignalR Hub

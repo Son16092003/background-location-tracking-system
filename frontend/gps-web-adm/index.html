@@ -16,20 +16,23 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
 
     <!-- Custom styles -->
-    <link rel="stylesheet" href="./style.css" />
+    <link rel="stylesheet" href="./css/main.css" />
   </head>
 
   <body>
     <!-- Header -->
     <header class="header-title">
-      <img src="./assets/Eye V2.gif" alt="icon" class="header-icon" />
-      <span>Web Admin - Tracking User</span>
+      <div class="header-left">
+        <img src="./assets/Eye V2.gif" alt="icon" class="header-icon" />
+        <span>Web Admin - Tracking User</span>
+      </div>   
     </header>
 
     <!-- Tabs -->
     <div class="tabs">
       <button id="tab-live" class="active">Live Tracking</button>
       <button id="tab-summary">Summary</button>
+      <button id="btn-logout" class="logout-btn">Logout</button>
       <button id="btn-guide" class="guide-btn" title="Hướng dẫn">?</button>
     </div>
 
@@ -54,9 +57,12 @@
         <label for="summary-device">Thiết bị:</label>
         <select id="summary-device"></select>
       </div>
-      <div style="display: flex; gap: 8px;">
+      <div style="display: flex; gap: 8px">
         <button id="btn-summary">Xem Summary</button>
-        <button id="btn-load-detail" title="Load detailed points for current view">
+        <button
+          id="btn-load-detail"
+          title="Load detailed points for current view"
+        >
           Load detail
         </button>
       </div>
@@ -108,18 +114,23 @@
           <div class="guide-section">
             <h4>🎮 Cách sử dụng:</h4>
             <ul class="guide-list">
-              <li><strong>Live Tracking:</strong> Theo dõi thiết bị thời gian thực</li>
-              <li><strong>Summary:</strong> Xem lịch sử di chuyển theo ngày</li>
-              <li><strong>Sidebar:</strong> Bật/tắt hiển thị từng thiết bị</li>
               <li>
-                <strong>Auto-fit:</strong> Bản đồ tự động zoom đến thiết bị đang hoạt động
+                <strong>Live Tracking:</strong> Theo dõi thiết bị thời gian thực
+              </li>
+              <li><strong>Summary:</strong> Xem lịch sử di chuyển theo ngày</li>
+              <li>
+                <strong>Auto-fit:</strong> Bản đồ tự động zoom đến thiết bị đang
+                hoạt động
               </li>
             </ul>
           </div>
 
           <div class="guide-section">
             <h4>🌈 Vệt màu:</h4>
-            <p>Mỗi thiết bị có màu vệt khác nhau để dễ phân biệt lộ trình di chuyển.</p>
+            <p>
+              Mỗi thiết bị có màu vệt khác nhau để dễ phân biệt lộ trình di
+              chuyển.
+            </p>
           </div>
         </div>
       </div>

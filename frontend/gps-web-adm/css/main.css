@@ -1,0 +1,355 @@
+/* =========================
+   RESET & GLOBAL
+========================= */
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  overflow: hidden;
+}
+
+/* =========================
+   MAP
+========================= */
+.map-container {
+  width: 100%;
+  height: 100vh;
+  position: relative;
+  z-index: 0;
+}
+
+/* =========================
+   HEADER
+========================= */
+.header-title {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #011F82;
+  font-size: 40px;
+  font-weight: bold;
+  pointer-events: auto;
+}
+
+.header-title img {
+  width: 48px;
+  height: 48px;
+  transform: translateY(10px);
+}
+
+/* =========================
+   DEVICE FILTER
+========================= */
+.device-control {
+  position: absolute;
+  top: 90px;
+  left: 10px;
+  z-index: 1100;
+  background: #fff;
+  padding: 16px;
+  width: 200px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.device-control h4 {
+  margin: 0;
+  font-size: 16px;
+  color: #011F82;
+  border-bottom: 1px solid #B9D6F3;
+  padding-bottom: 6px;
+}
+
+.device-control label {
+  color: #6D92D0;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.device-control input,
+.device-control select,
+.device-control button {
+  height: 36px;
+  border-radius: 6px;
+  border: 1px solid #B9D6F3;
+  padding: 0 8px;
+  font-size: 14px;
+  width: 100%;
+  margin-top: 6px;
+}
+
+.device-control input:focus,
+.device-control select:focus {
+  border-color: #011F82;
+  box-shadow: 0 0 5px rgba(1,31,130,0.5);
+  outline: none;
+}
+
+.device-control button {
+  background: #011F82;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  border: none;
+}
+
+.device-control button:hover {
+  background: #0055cc;
+}
+
+/* =========================
+   TABS
+========================= */
+.tabs {
+  position: absolute;
+  top: 80px;
+  right: 10px;
+  z-index: 1200;
+  display: flex;
+  gap: 6px;
+}
+
+.tabs button {
+  padding: 8px 14px;
+  border: none;
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.tabs button.active {
+  background: #011F82;
+  color: white;
+}
+
+/* ===== GUIDE TAB BUTTON FIX ===== */
+.tabs .guide-btn {
+  background: #28a745 !important;
+  color: white !important;
+  border-radius: 50% !important;
+  width: 36px !important;
+  height: 36px !important;
+  padding: 0 !important;
+  font-size: 18px !important;
+  font-weight: bold;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.tabs .guide-btn:hover {
+  background: #218838 !important;
+}
+
+/* =========================
+   DEVICE LIST
+========================= */
+.device-list-container {
+  position: absolute;
+  top: 150px;
+  right: 10px;
+  z-index: 1100;
+  background: white;
+  padding: 10px;
+  width: 240px;
+  max-height: 300px;
+  overflow-y: auto;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+.device-list-container h4 {
+  margin: 0 0 8px 0;
+  color: #011F82;
+}
+
+/* =========================
+   GUIDE DIALOG
+========================= */
+.guide-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.guide-content {
+  background: white;
+  width: 600px;
+  max-width: 95%;
+  max-height: 85vh;
+  overflow-y: auto;
+  border-radius: 12px;
+  animation: fadeInScale 0.3s ease-out;
+}
+
+@keyframes fadeInScale {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.guide-header {
+  background: #011F82;
+  color: white;
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 22px;
+  cursor: pointer;
+}
+
+/* ===== GUIDE ICON LIST FIX ===== */
+.icon-guide {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+}
+
+.icon-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px;
+  border-radius: 8px;
+  background: #f9f9f9;
+  border: 1px solid #e0e0e0;
+}
+
+.guide-icon {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+}
+
+.icon-description {
+  flex: 1;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.icon-description strong {
+  color: #011F82;
+}
+
+/* =========================
+   MESSAGE
+========================= */
+.summary-message {
+  margin: 10px;
+  padding: 12px;
+  border-radius: 6px;
+  display: none;
+}
+
+.summary-message.success {
+  background: #d4edda;
+  border-left: 4px solid #28a745;
+}
+
+/* =========================
+   DEVICE LABEL
+========================= */
+.device-label {
+  background: rgba(255,255,255,0.95);
+  color: #011F82;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+/* =========================
+   RESPONSIVE
+========================= */
+
+/* TABLET */
+@media (max-width: 1024px) {
+  .header-title {
+    font-size: 32px;
+  }
+
+  .device-control,
+  .device-list-container {
+    width: 200px;
+  }
+}
+
+/* MOBILE */
+@media (max-width: 768px) {
+  .header-title {
+    font-size: 24px;
+    top: 5px;
+  }
+
+  .tabs {
+    top: auto;
+    bottom: 10px;
+    right: 50%;
+    transform: translateX(50%);
+  }
+
+  .device-control {
+    width: calc(100% - 20px);
+    left: 10px;
+    top: auto;
+    bottom: 70px;
+  }
+
+  .device-list-container {
+    display: none;
+  }
+
+  .icon-item {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+}
+
+/* SMALL MOBILE */
+@media (max-width: 480px) {
+  .header-title {
+    font-size: 20px;
+  }
+
+  .device-control {
+    padding: 12px;
+  }
+
+  .icon-description {
+    font-size: 13px;
+  }
+}
+
+#live-sidebar input[type="checkbox"] {
+  display: none;
+}

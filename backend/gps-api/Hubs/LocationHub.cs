@@ -1,33 +1,33 @@
-﻿using Microsoft.AspNetCore.SignalR;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.SignalR;
 
 namespace TrackingAPI.Hubs
 {
+    [Authorize] // 🔥 BẮT BUỘC
     public class LocationHub : Hub
     {
-        // Khi client (web admin) kết nối
         public override async Task OnConnectedAsync()
         {
-            Console.WriteLine($"🔗 Client connected: {Context.ConnectionId}");
+            var user = Context.User?.Identity?.Name ?? "Anonymous";
 
-            // Thông báo kết nối thành công cho client (optional)
+            Console.WriteLine($"🔗 Client connected: {user} | {Context.ConnectionId}");
+
             await Clients.Caller.SendAsync("Connected", new
             {
                 connectionId = Context.ConnectionId,
+                user,
                 connectedAt = DateTime.UtcNow
             });
 
             await base.OnConnectedAsync();
         }
 
-        // Khi client ngắt kết nối
         public override async Task OnDisconnectedAsync(Exception? exception)
         {
             Console.WriteLine($"❌ Client disconnected: {Context.ConnectionId}");
             await base.OnDisconnectedAsync(exception);
         }
 
-        // 🔹 (OPTIONAL – dùng sau này)
-        // Cho client join group theo deviceId / userId
         public async Task JoinGroup(string groupName)
         {
             await Groups.AddToGroupAsync(Context.ConnectionId, groupName);
