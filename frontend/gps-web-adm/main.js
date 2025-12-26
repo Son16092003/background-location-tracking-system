@@ -203,7 +203,6 @@ function onSignalRLocationReceived(payload) {
   handleRealtimeTracking(payload);
 }
 
-
 // ================================================
 // 3️⃣ Xử lý sự kiện Realtime từ Hub
 // ================================================
@@ -303,6 +302,17 @@ function handleRealtimeTracking(data) {
       .bindPopup(
         `<b>${userName || deviceId}</b><br>${timestamp.toLocaleTimeString()}`
       );
+
+    // ⭐ bind tooltip username (KHÔNG có time)
+    const label = getDeviceLabel(device);
+    device.liveMarker
+      .bindTooltip(label, {
+        permanent: true,
+        direction: "top",
+        offset: [0, -20],
+        className: "device-label",
+      })
+      .openTooltip();
   }
 
   /* ===============================
@@ -319,8 +329,8 @@ function handleRealtimeTracking(data) {
   } catch {}
 
   /* ===============================
-    * 8. Status timer (3-phase)
-    * =============================== */
+   * 8. Status timer (3-phase)
+   * =============================== */
   if (!device.liveTimer) {
     device.liveTimer = setInterval(() => {
       if (!device.lastTimestamp) return;
@@ -409,7 +419,6 @@ function handleRealtimeTracking(data) {
   autoFitActiveDevices(isNewDevice ? "new" : "update");
   schedulePersist();
 }
-
 
 // Remove device visuals (live marker and trail) from the map and mark device as hidden.
 function removeDeviceVisuals(deviceId) {
@@ -521,18 +530,7 @@ function autoFitActiveDevices() {
 
 // Small helper: produce the label content shown above the marker (username • time)
 function getDeviceLabel(device) {
-  const name = device.userName || device.deviceId || "unknown";
-  let timeStr = "";
-  try {
-    const ts =
-      device.lastTimestamp instanceof Date
-        ? device.lastTimestamp
-        : new Date(device.lastTimestamp);
-    if (!isNaN(ts.getTime())) timeStr = ts.toLocaleTimeString();
-  } catch (e) {
-    timeStr = "";
-  }
-  return timeStr ? `${name} • ${timeStr}` : `${name}`;
+  return device.userName || device.deviceId || "unknown";
 }
 
 // Fit map to all devices currently known/visible (used on refresh to show full area)
@@ -912,5 +910,3 @@ function schedulePersist() {
     persistDevicesState();
   }, 500);
 }
-
-

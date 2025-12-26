@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import com.plcoding.backgroundlocationtracking.data.model.TrackingData
 import com.plcoding.backgroundlocationtracking.data.network.TrackingRepository
+import com.plcoding.backgroundlocationtracking.data.network.ApiClient
 import kotlinx.coroutines.*
 
 class OfflineTrackingManager private constructor(context: Context) {
@@ -34,7 +35,6 @@ class OfflineTrackingManager private constructor(context: Context) {
             return getInstance(context).startRetryQueue()
         }
 
-        // ✅ Sửa lại hàm này thành suspend
         suspend fun getPendingCount(context: Context): Int {
             val pendingList = getInstance(context).dao.getAll()
             return pendingList.size
@@ -58,16 +58,15 @@ class OfflineTrackingManager private constructor(context: Context) {
                         optimisticLockField = tracking.OptimisticLockField,
                         gcRecord = tracking.GCRecord,
                         userName = tracking.UserName,
-
                         isOffline = true
                     )
                 )
                 Log.w(
                     TAG,
-                    "💾 Lưu dữ liệu pending offline: [Oid=${tracking.Oid}, Device=${tracking.DeviceID}, Lat=${tracking.Latitude}, Lon=${tracking.Longitude}]"
+                    "💾 Lưu pending offline: [Oid=${tracking.Oid}, Device=${tracking.DeviceID}, Lat=${tracking.Latitude}, Lon=${tracking.Longitude}]"
                 )
             } catch (e: Exception) {
-                Log.e(TAG, "❌ Lỗi khi lưu dữ liệu offline: ${e.message}")
+                Log.e(TAG, "❌ Lỗi lưu offline: ${e.message}", e)
             }
         }
     }
@@ -94,8 +93,13 @@ class OfflineTrackingManager private constructor(context: Context) {
 
                 Log.i(TAG, "🚀 Bắt đầu retry ${pendingList.size} bản ghi offline...")
 
-                for (item in pendingList) {
+                val jwtToken = ApiClient.getJwtTokenMasked()
+                if (jwtToken.isNullOrEmpty()) {
+                    Log.w(TAG, "⚠️ JWT null/empty — giữ nguyên offline, không gửi.")
+                    return@withContext 0
+                }
 
+                for (item in pendingList) {
                     val trackingData = TrackingData(
                         Oid = item.oid,
                         DeviceID = item.deviceID,
@@ -106,36 +110,35 @@ class OfflineTrackingManager private constructor(context: Context) {
                         OptimisticLockField = item.optimisticLockField,
                         GCRecord = item.gcRecord,
                         UserName = item.userName,
-
-                        // ⭐ QUAN TRỌNG: dữ liệu retry LUÔN là offline
                         IsOffline = true
                     )
+
+                    val jwtToken = ApiClient.getJwtTokenMasked() // giả sử bạn thêm hàm get masked JWT trong ApiClient
+                    Log.d(TAG, "🔑 JWT dùng gửi offline: $jwtToken")
+                    Log.d(TAG, "📤 Gửi offline: Oid=${item.oid}, Device=${item.deviceID}, Lat=${item.latitude}, Lon=${item.longitude}")
 
                     val success = try {
                         TrackingRepository.postTrackingWithRetry(trackingData)
                     } catch (e: Exception) {
-                        Log.e(TAG, "❌ Lỗi gửi ID=${item.id}: ${e.message}")
+                        Log.e(TAG, "❌ Lỗi gửi Oid=${item.oid}: ${e.message}", e)
                         false
                     }
 
                     if (success) {
                         dao.deleteById(item.id)
                         successCount++
-                        Log.i(TAG, "✅ Gửi thành công ID=${item.id}, xóa khỏi pending.")
+                        Log.i(TAG, "✅ Gửi thành công Oid=${item.oid}, xóa khỏi pending.")
                     } else {
-                        Log.w(TAG, "⚠️ Gửi thất bại ID=${item.id}, giữ lại pending.")
+                        Log.w(TAG, "⚠️ Gửi thất bại Oid=${item.oid}, giữ lại pending.")
                     }
 
-                    delay(1000) // throttle tránh spam server
+                    delay(500) // throttle nhẹ tránh spam server
                 }
 
-                Log.i(
-                    TAG,
-                    "🎯 Retry hoàn tất: $successCount/${pendingList.size} bản ghi gửi thành công."
-                )
+                Log.i(TAG, "🎯 Retry hoàn tất: $successCount/${pendingList.size} bản ghi gửi thành công.")
                 successCount
             } catch (e: Exception) {
-                Log.e(TAG, "❌ Lỗi trong startRetryQueue: ${e.message}")
+                Log.e(TAG, "❌ Lỗi trong startRetryQueue: ${e.message}", e)
                 0
             } finally {
                 isRetrying = false

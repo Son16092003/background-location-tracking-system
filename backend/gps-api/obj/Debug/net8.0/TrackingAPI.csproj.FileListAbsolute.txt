@@ -388,3 +388,5 @@ C:\TTTN\Sql Server\BackgroundLocationTracking\backend\gps-api\obj\Debug\net8.0\r
 C:\TTTN\Sql Server\BackgroundLocationTracking\backend\gps-api\obj\Debug\net8.0\TrackingAPI.pdb
 C:\TTTN\Sql Server\BackgroundLocationTracking\backend\gps-api\obj\Debug\net8.0\TrackingAPI.genruntimeconfig.cache
 C:\TTTN\Sql Server\BackgroundLocationTracking\backend\gps-api\obj\Debug\net8.0\ref\TrackingAPI.dll
+C:\TTTN\Sql Server\BackgroundLocationTracking\backend\gps-api\bin\Debug\net8.0\BCrypt.Net-Next.dll
+C:\TTTN\Sql Server\BackgroundLocationTracking\backend\gps-api\bin\Debug\net8.0\Microsoft.AspNetCore.Authentication.JwtBearer.dll

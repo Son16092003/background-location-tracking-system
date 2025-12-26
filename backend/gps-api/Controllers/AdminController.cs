@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authentication;
+Ôªøusing Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -8,7 +8,7 @@ namespace TrackingAPI.Controllers
 {
     [ApiController]
     [Route("api/admin")]
-    [Authorize] // ?? M?c ??nh yÍu c?u login
+    [Authorize] // ?? M?c ??nh y√™u c?u login
     public class AdminController : ControllerBase
     {
         private readonly IConfiguration _config;
@@ -32,7 +32,7 @@ namespace TrackingAPI.Controllers
             {
                 return Unauthorized(new
                 {
-                    message = "Sai t‡i kho?n ho?c m?t kh?u"
+                    message = "Sai t√†i kho?n ho?c m?t kh?u"
                 });
             }
 
@@ -61,12 +61,12 @@ namespace TrackingAPI.Controllers
 
             return Ok(new
             {
-                message = "Login th‡nh cÙng"
+                message = "Login th√†nh c√¥ng"
             });
         }
 
         // =======================
-        // POST api/admin/logout (xÛa cookie)
+        // POST api/admin/logout (x√≥a cookie)
         // =======================
         [HttpPost("logout")]
         public async Task<IActionResult> Logout()
@@ -77,7 +77,7 @@ namespace TrackingAPI.Controllers
 
             return Ok(new
             {
-                message = "d„ logout"
+                message = "d√£ logout"
             });
         }
 

@@ -3,10 +3,9 @@
     "",
     "\\bin",
     "\\Controllers",
-    "\\Hubs",
-    "\\Models",
-    "\\Properties"
+    "\\Dtos",
+    "\\Models"
   ],
-  "SelectedNode": "\\Controllers\\AdminController.cs",
+  "SelectedNode": "\\Controllers\\TrackingController.cs",
   "PreviewInSolutionExplorer": false
 }

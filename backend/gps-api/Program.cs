@@ -3,6 +3,10 @@ using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using TrackingAPI.Data;
 using TrackingAPI.Hubs;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -36,30 +40,78 @@ builder.Services
     });
 
 // =======================
-// 🔐 Cookie Authentication (Web Admin)
+// Login Cookie & JWT Authentication 
 // =======================
 builder.Services
-    .AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
-    .AddCookie(options =>
+    .AddAuthentication(options =>
+    {
+        // Mặc định vẫn là Cookie cho Web Admin
+        options.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+    })
+    // =======================
+    // 🍪 Cookie – Web Admin
+    // =======================
+    .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, options =>
     {
         options.Cookie.Name = "TrackingAdminAuth";
         options.Cookie.HttpOnly = true;
 
-        // 🔥 Cloudflare / HTTPS
         options.Cookie.SameSite = SameSiteMode.None;
         options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
 
         options.ExpireTimeSpan = TimeSpan.FromHours(8);
         options.SlidingExpiration = true;
 
-        // ❌ Không redirect, trả 401 cho frontend xử lý
         options.Events.OnRedirectToLogin = ctx =>
         {
             ctx.Response.StatusCode = 401;
             return Task.CompletedTask;
         };
-    });
+    })
 
+    // =======================
+    // 🔐 JWT – Android Device
+    // =======================
+    .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
+    {
+        options.RequireHttpsMetadata = true;
+        options.SaveToken = false;
+
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidAudience = builder.Configuration["Jwt:Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:SecretKey"])
+            ),
+
+            ClockSkew = TimeSpan.FromSeconds(30)
+        };
+
+        // 🔥 JWT cho SignalR (query string)
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+
+                var path = context.HttpContext.Request.Path;
+                if (!string.IsNullOrEmpty(accessToken) &&
+                    path.StartsWithSegments("/hubs/location"))
+                {
+                    context.Token = accessToken;
+                }
+
+                return Task.CompletedTask;
+            }
+        };
+    });
 
 
 // =======================

@@ -12,5 +12,8 @@ namespace TrackingAPI.Data
         }
 
         public DbSet<GPSDeviceTracking> GPS_DeviceTracking { get; set; }
+
+        public DbSet<Device> Devices { get; set; }
+
     }
 }

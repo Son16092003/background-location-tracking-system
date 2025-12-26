@@ -36,16 +36,10 @@ object TrackingRepository {
             val info = result.second
 
             if (success) {
-                Log.i(
-                    TAG,
-                    "✅ Sent tracking (attempt $i) | device=${data.DeviceID} | offline=${data.IsOffline}"
-                )
+                Log.i(TAG, "✅ Sent tracking (attempt $i) | device=${data.DeviceID} | offline=${data.IsOffline}")
                 return true
             } else {
-                Log.w(
-                    TAG,
-                    "⚠️ Fail send (attempt $i) | device=${data.DeviceID} | offline=${data.IsOffline} | reason=$info"
-                )
+                Log.w(TAG, "⚠️ Fail send (attempt $i) | device=${data.DeviceID} | offline=${data.IsOffline} | reason=$info")
 
                 if (i < attempts) {
                     val backoff = initialDelayMs * (1L shl (i - 1)) // exponential backoff
@@ -59,10 +53,7 @@ object TrackingRepository {
             }
         }
 
-        Log.e(
-            TAG,
-            "❌ All retries failed | device=${data.DeviceID} | offline=${data.IsOffline}"
-        )
+        Log.e(TAG, "❌ All retries failed | device=${data.DeviceID} | offline=${data.IsOffline}")
         return false
     }
 }

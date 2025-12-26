@@ -1,14 +1,17 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using TrackingAPI.Data;
 using TrackingAPI.Hubs;
 using TrackingAPI.Models;
-using TrackingAPI.Dtos; // ✅ thêm DTO
+using TrackingAPI.Dtos;
 
 namespace TrackingAPI.Controllers
 {
     [Route("api/GPS_DeviceTracking")]
     [ApiController]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)] // 🔐 JWT DEVICE
     public class TrackingController : ControllerBase
     {
         private readonly TrackingDbContext _context;
@@ -22,53 +25,75 @@ namespace TrackingAPI.Controllers
             _hubContext = hubContext;
         }
 
+        // ============================
+        // 🔓 Health check
+        // ============================
+        [AllowAnonymous]
         [HttpGet("ping")]
         public IActionResult Ping()
         {
             return Ok("Tracking API is alive!");
         }
 
+        // ============================
+        // 📡 POST GPS DATA (JWT DEVICE)
+        // ============================
         [HttpPost]
         public async Task<IActionResult> PostTracking(
-            [FromBody] GPSDeviceTracking tracking)
+            [FromBody] GpsTrackingCreateDto dto)
         {
-            if (tracking == null)
-                return BadRequest("Invalid tracking payload.");
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
 
-            // ⏱️ Chuẩn hoá thời gian (server là nguồn sự thật)
-            if (tracking.RecordDate == default)
-                tracking.RecordDate = DateTime.UtcNow.AddHours(7);
+            // ============================
+            // 🔐 LẤY DEVICE ID TỪ JWT
+            // ============================
+            var deviceId = User.FindFirst("deviceId")?.Value;
+            if (string.IsNullOrEmpty(deviceId))
+                return Unauthorized("Invalid device token.");
 
-            // 1️ LUÔN lưu DB (offline hay realtime đều lưu)
+            // ============================
+            // MAP DTO → ENTITY
+            // ============================
+            var tracking = new GPSDeviceTracking
+            {
+                Oid = Guid.NewGuid(),
+                DeviceID = deviceId,          // 🔥 LUÔN từ JWT
+                Latitude = dto.Latitude,
+                Longitude = dto.Longitude,
+                UserName = dto.UserName,
+                Title = dto.Title,
+                IsOffline = dto.IsOffline,
+                RecordDate = dto.RecordDate ?? DateTime.UtcNow.AddHours(7)
+            };
+
+            // ============================
+            // 1️⃣ LUÔN LƯU DB
+            // ============================
             _context.GPS_DeviceTracking.Add(tracking);
             await _context.SaveChangesAsync();
 
-            // ⭐ 2️ CHỈ phát SignalR nếu là realtime
+            // ============================
+            // 2️⃣ SIGNALR REALTIME
+            // ============================
             if (!tracking.IsOffline)
             {
-                // Map Entity → DTO cho realtime
                 var realtimeDto = new LocationRealtimeDto
                 {
                     DeviceId = tracking.DeviceID,
-                    UserName = tracking.UserName,
+                    UserName = tracking.UserName ?? string.Empty,
                     Latitude = tracking.Latitude,
                     Longitude = tracking.Longitude,
                     Timestamp = tracking.RecordDate
                 };
 
-                // Broadcast SignalR (DTO ONLY)
-                await _hubContext
-                    .Clients
-                    .All
+                await _hubContext.Clients.All
                     .SendAsync("ReceiveLocationUpdate", realtimeDto);
             }
-            else
-            {
-                // 🔕 Offline data → KHÔNG broadcast
-                // Chỉ lưu DB để phục vụ history / replay
-            }
 
-            // 3️ Response cho client gửi GPS (android / device)
+            // ============================
+            // 3️⃣ RESPONSE
+            // ============================
             return Ok(new
             {
                 message = tracking.IsOffline

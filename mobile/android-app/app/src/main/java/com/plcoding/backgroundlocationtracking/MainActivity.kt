@@ -26,10 +26,8 @@ import com.plcoding.backgroundlocationtracking.ui.theme.UserIdentityDialog
 import com.plcoding.backgroundlocationtracking.util.AppHider
 import com.plcoding.backgroundlocationtracking.worker.RetryTrackingWorker
 import com.plcoding.backgroundlocationtracking.worker.RetryWorkerScheduler
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import com.plcoding.backgroundlocationtracking.data.network.ApiClient
+import kotlinx.coroutines.*
 
 class MainActivity : AppCompatActivity() {
 
@@ -41,14 +39,22 @@ class MainActivity : AppCompatActivity() {
     private val permissions = buildList {
         add(Manifest.permission.ACCESS_FINE_LOCATION)
         add(Manifest.permission.ACCESS_COARSE_LOCATION)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) add(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) add(Manifest.permission.POST_NOTIFICATIONS)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
+            add(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+            add(Manifest.permission.POST_NOTIFICATIONS)
     }.toTypedArray()
 
     private val requestPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
-            val allGranted = result.all { it.value }
-            if (allGranted) {
+            permissions.forEach {
+                val status =
+                    if (ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED) "✅"
+                    else "❌"
+                Log.d(TAG, "$status Permission: $it")
+            }
+
+            if (result.all { it.value }) {
                 Log.i(TAG, "✅ Quyền được cấp đầy đủ — hiển thị dialog nhập thông tin")
                 showUserIdentityDialog()
             } else {
@@ -64,7 +70,6 @@ class MainActivity : AppCompatActivity() {
         if (sharedPref.getBoolean("setup_done", false)) {
             Log.i(TAG, "🚫 Setup đã hoàn thành trước đó — kiểm tra service trước khi đóng app.")
 
-            // 🧩 Kiểm tra nếu service chưa chạy thì khởi động lại
             if (!isLocationServiceRunning()) {
                 Log.w(TAG, "⚠️ LocationService chưa chạy — khởi động lại ngay.")
                 startLocationService()
@@ -76,10 +81,10 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
+        Log.i(TAG, "🚀 Bắt đầu setup mới")
         policyManager = PolicyManager(this)
         adminComponent = ComponentName(this, MyDeviceAdminReceiver::class.java)
 
-        // 1️⃣ Kiểm tra Device Admin / Owner
         ensureDeviceAdmin()
     }
 
@@ -105,20 +110,20 @@ class MainActivity : AppCompatActivity() {
         if (dpm.isDeviceOwnerApp(packageName)) {
             Log.i(TAG, "🏢 App hiện là DEVICE OWNER")
             applyEnterprisePolicies()
-        } else Log.w(TAG, "⚠️ App chưa phải Device Owner (chỉ có quyền Device Admin)")
+        } else {
+            Log.w(TAG, "⚠️ App chưa phải Device Owner (chỉ có quyền Device Admin)")
+        }
     }
 
     private fun applyEnterprisePolicies() {
         lifecycleScope.launch {
             Log.i(TAG, "🚀 Áp dụng chính sách Device Owner...")
             policyManager.blockUninstall(true)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) policyManager.blockLocationPermissionChanges()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+                policyManager.blockLocationPermissionChanges()
             policyManager.enforceLocationPolicy()
 
-            // 🧩 Bật BootReceiver để đảm bảo service tự khởi động sau reboot
             enableBootReceiver()
-
-            // 2️⃣ Sau khi apply policy xong → check quyền
             checkPermissions()
         }
     }
@@ -127,6 +132,7 @@ class MainActivity : AppCompatActivity() {
         val allGranted = permissions.all {
             ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
         }
+
         if (allGranted) showUserIdentityDialog()
         else requestPermissionLauncher.launch(permissions)
     }
@@ -135,63 +141,82 @@ class MainActivity : AppCompatActivity() {
     // 📡 User Identity & Tracking
     // ==========================
     private fun showUserIdentityDialog() {
-        val dialog = UserIdentityDialog(this)
-        dialog.show { deviceId, title, userName ->
+        UserIdentityDialog(this).show { deviceId, title, userName ->
             Log.i(TAG, "✅ UserIdentity đã nhập: DeviceID=$deviceId, Title=$title, UserName=$userName")
 
-            // 3️⃣ Lưu SharedPreferences trước khi start service
-            val prefs = getSharedPreferences("setup_prefs", Context.MODE_PRIVATE).edit()
-            prefs.putBoolean("setup_done", true)
-            prefs.putString("device_id", deviceId)
-            prefs.putString("title", title)
-            prefs.putString("user_name", userName)
-            prefs.apply()
+            getSharedPreferences("setup_prefs", Context.MODE_PRIVATE).edit()
+                .putBoolean("setup_done", true)
+                .putString("device_id", deviceId)
+                .putString("title", title)
+                .putString("user_name", userName)
+                .apply()
 
-            // 4️⃣ Start tracking
-            lifecycleScope.launch {
-                startTrackingSystem()
-
-                // 5️⃣ Delay để service chạy foreground ổn định trước khi ẩn app
-                withContext(Dispatchers.Main) {
-                    delay(1000)
-                    AppHider.hideAppIcon(this@MainActivity)
-                    val homeIntent = Intent(Intent.ACTION_MAIN).apply {
-                        addCategory(Intent.CATEGORY_HOME)
-                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                    }
-                    startActivity(homeIntent)
-                    finishAndRemoveTask()
-                }
-            }
+            Log.i(TAG, "💾 SharedPreferences đã lưu xong, chuẩn bị start LocationService")
+            startTrackingSystem(deviceId, title, userName)
         }
     }
 
-    private suspend fun startTrackingSystem() {
-        var retryCount = 0
-        while (!isLocationServiceRunning() && retryCount < 3) {
-            Log.w(TAG, "⚠️ Service chưa khởi động, thử lại lần ${retryCount + 1}")
+    private fun startTrackingSystem(deviceId: String, title: String, userName: String) {
+        lifecycleScope.launch {
+
+            // 1️⃣ Start tracking ngay
+            Log.i(TAG, "📡 Khởi động LocationService ngay lập tức")
             startLocationService()
+
+            // 2️⃣ Activate device (JWT) — CHẠY IO THREAD
+            withContext(Dispatchers.IO) {
+                Log.i(TAG, "🔑 Bắt đầu kích hoạt device để lấy JWT với retry production-ready")
+                retryDeviceActivation(deviceId, title, userName, maxRetry = 5, delayMs = 30_000L)
+            }
+
+            // 3️⃣ Hide app icon + về Home
             delay(1000)
-            retryCount++
-        }
+            AppHider.hideAppIcon(this@MainActivity)
+            Log.i(TAG, "🕵️‍♂️ App đã ẩn icon, chuyển về màn hình Home")
 
-        if (isLocationServiceRunning()) {
-            Log.i(TAG, "📍 LocationService đã khởi động thành công.")
-        } else {
-            Log.e(TAG, "❌ LocationService vẫn chưa khởi động được sau 3 lần thử.")
-        }
+            startActivity(
+                Intent(Intent.ACTION_MAIN).apply {
+                    addCategory(Intent.CATEGORY_HOME)
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+            )
+            finishAndRemoveTask()
 
-        scheduleRetryWorker()
-        Log.i(TAG, "🚀 Tracking system khởi động hoàn chỉnh")
+            // 4️⃣ Schedule retry worker
+            scheduleRetryWorker()
+        }
     }
 
+    private suspend fun retryDeviceActivation(
+        deviceId: String,
+        title: String,
+        userName: String,
+        maxRetry: Int,
+        delayMs: Long
+    ) {
+        repeat(maxRetry) { attempt ->
+            Log.i(TAG, "🔄 Thử kích hoạt device lần ${attempt + 1}")
+            val activated = ApiClient.activateDevice(deviceId, title, userName)
+            if (activated) {
+                Log.i(TAG, "✅ Device JWT nhận thành công sau lần thử ${attempt + 1}")
+                return
+            }
+            Log.e(TAG, "❌ Kích hoạt thất bại lần ${attempt + 1}, retry sau $delayMs ms")
+            delay(delayMs)
+        }
+        Log.e(TAG, "❌ Không nhận được JWT sau $maxRetry lần — giao cho Worker xử lý tiếp")
+    }
+
+    // ==========================
+    // 📍 Location Service
+    // ==========================
     private fun startLocationService() {
-        val serviceIntent = Intent(this, LocationService::class.java)
+        val intent = Intent(this, LocationService::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-            ContextCompat.startForegroundService(this, serviceIntent)
-        else
-            startService(serviceIntent)
-        Log.i(TAG, "📡 Đã khởi động LocationService (Foreground - ẩn hoàn toàn)")
+            ContextCompat.startForegroundService(this, intent)
+        else startService(intent)
+
+        Log.i(TAG, "📡 LocationService đã được start (Foreground - ẩn hoàn toàn)")
     }
 
     private fun isLocationServiceRunning(): Boolean {
@@ -200,20 +225,28 @@ class MainActivity : AppCompatActivity() {
             .any { it.service.className == LocationService::class.java.name }
     }
 
+    // ==========================
+    // 🔁 Worker
+    // ==========================
     private fun scheduleRetryWorker() {
-        val oneTimeRequest = OneTimeWorkRequestBuilder<RetryTrackingWorker>().build()
-        WorkManager.getInstance(applicationContext).enqueueUniqueWork(
-            "RetryTrackingWorkerOnce", ExistingWorkPolicy.REPLACE, oneTimeRequest
-        )
+        val request = OneTimeWorkRequestBuilder<RetryTrackingWorker>().build()
+        WorkManager.getInstance(applicationContext)
+            .enqueueUniqueWork("RetryTrackingWorkerOnce", ExistingWorkPolicy.REPLACE, request)
+
         RetryWorkerScheduler.schedule(applicationContext)
-        Log.i(TAG, "⏰ Lên lịch periodic RetryTrackingWorker")
+        Log.i(TAG, "⏰ RetryTrackingWorker đã được lên lịch")
     }
 
+    // ==========================
+    // ⚠️ UI
+    // ==========================
     private fun showPermissionDialog() {
         AlertDialog.Builder(this)
             .setTitle("Yêu cầu quyền truy cập")
             .setMessage("Ứng dụng cần quyền Location và Notification để hoạt động chính xác.")
-            .setPositiveButton("Thử lại") { _, _ -> requestPermissionLauncher.launch(permissions) }
+            .setPositiveButton("Thử lại") { _, _ ->
+                requestPermissionLauncher.launch(permissions)
+            }
             .setNegativeButton("Thoát") { _, _ -> finish() }
             .setCancelable(false)
             .show()
@@ -226,11 +259,11 @@ class MainActivity : AppCompatActivity() {
             PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
             PackageManager.DONT_KILL_APP
         )
-        Log.i(TAG, "🔔 BootReceiver đã được bật đảm bảo tự khởi động sau reboot")
+        Log.i(TAG, "🔔 BootReceiver đã được bật")
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        Log.i(TAG, "🧹 MainActivity bị hủy (app vẫn chạy nền qua service).")
+        Log.i(TAG, "🧹 MainActivity bị hủy (service vẫn chạy nền).")
     }
 }
