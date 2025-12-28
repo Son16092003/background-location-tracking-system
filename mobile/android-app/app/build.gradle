@@ -24,7 +24,6 @@ android {
 
         // API Key & Log
         buildConfigField "boolean", "ENABLE_HTTP_LOG", "true"
-        buildConfigField "String", "API_KEY", "\"THIS_IS_A_SUPER_SECRET_DEVICE_KEY_CHANGE_ME\""
     }
 
     signingConfigs {
