@@ -10,8 +10,8 @@ CREATE TABLE dbo.Devices (
     Id UNIQUEIDENTIFIER NOT NULL,
     UserName NVARCHAR(100) NOT NULL,
     Title NVARCHAR(200) NOT NULL,
-    CreatedAt DATETIME2(7) NOT NULL,
-GO
+    CreatedAt DATETIME2(7) NOT NULL
+);
 
 /* =========================================================
    TABLE: GPS_DeviceTracking
